@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import math
 import random
+from asyncio.windows_events import NULL
 from pickletools import optimize
 
 ################################################################################
@@ -20,7 +21,7 @@ from PySide6.QtCore import (QCoreApplication,
 from PySide6.QtWidgets import (QComboBox, QGridLayout, QLabel,
                                QMenuBar, QPushButton,
                                QSlider, QSpinBox, QStatusBar, QVBoxLayout,
-                               QWidget, QLCDNumber)
+                               QWidget, QLCDNumber, QCheckBox)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -114,10 +115,19 @@ class Ui_MainWindow(object):
         self.loadType = QComboBox(self.verticalLayoutWidget_2)
         self.loadType.setObjectName(u"loadType")
         self.loadType.addItem("Private house")
-        self.loadType.addItem("Enterprise")
+        self.loadType.addItem("Enterprise Typical")
+        self.loadType.addItem("Enterprise 24/7")
         self.loadType.setIconSize(QSize(16, 16))
 
         self.gridLayout.addWidget(self.loadType, 9, 1, 1, 1)
+
+        self.dayOfWeekType = QComboBox(self.verticalLayoutWidget_2)
+        self.dayOfWeekType.setObjectName(u"dayOfWeekType")
+        self.dayOfWeekType.addItem("Weekday")
+        self.dayOfWeekType.addItem("Weekend")
+        self.dayOfWeekType.setIconSize(QSize(16, 16))
+
+        self.gridLayout.addWidget(self.dayOfWeekType, 10, 1, 1, 1)
 
         self.labelPChargeMax = QLabel(self.verticalLayoutWidget_2)
         self.labelPChargeMax.setObjectName(u"labelPChargeMax")
@@ -143,6 +153,11 @@ class Ui_MainWindow(object):
         self.labelSeason.setObjectName(u"labelSeason")
 
         self.gridLayout.addWidget(self.labelSeason, 8, 0, 1, 1)
+
+        self.labelDayOfWeek = QLabel(self.verticalLayoutWidget_2)
+        self.labelDayOfWeek.setObjectName(u"labelDayOfWeek")
+
+        self.gridLayout.addWidget(self.labelDayOfWeek, 10, 0, 1, 1)
 
         self.lcdSOCMin = QLCDNumber(self.verticalLayoutWidget_2)
         self.lcdSOCMin.setObjectName(u"lcdSOCMin")
@@ -214,6 +229,9 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.SOC_initial_value, 0, 1, 1, 1)
 
+        self.checkOverride = QCheckBox(self.verticalLayoutWidget_2)
+        self.checkOverride.setObjectName(u"checkOverride")
+        self.gridLayout.addWidget(self.checkOverride, 11, 1, 1, 1)
 
         self.verticalLayoutInputParams.addLayout(self.gridLayout)
 
@@ -230,12 +248,16 @@ class Ui_MainWindow(object):
         self.lcdSOCMin.display(str(0.1))
         self.lcdSOCMax.display(str(0.9))
 
+        self.fPV = NULL
+        self.fLoad = NULL
+
         self.retranslateUi(MainWindow)
         self.SOC_initial_value.valueChanged.connect(self.updateSOCInitialLCD)
         self.SOC_min_value.valueChanged.connect(self.updateSOCMinLCD)
         self.SOC_max_value.valueChanged.connect(self.updateSOCMaxLCD)
         self.optimizeButton.clicked.connect(self.optimize)
         self.simulatePVButton.clicked.connect(self.simulatePV)
+        self.simulateLoadButton.clicked.connect(self.simulateLoad)
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
@@ -267,23 +289,130 @@ class Ui_MainWindow(object):
         self.labelCBuy.setText(QCoreApplication.translate("MainWindow", u"C buy", None))
         self.labelSeason.setText(QCoreApplication.translate("MainWindow", u"Season", None))
         self.labelLoadType.setText(QCoreApplication.translate("MainWindow", u"Load type", None))
-        self.seasonType.setCurrentText("")
+        self.labelDayOfWeek.setText(QCoreApplication.translate("MainWindow", u"Day of week", None))
         self.labelSOCMin.setText(QCoreApplication.translate("MainWindow", u"SOC Min", None))
+        self.checkOverride.setText(QCoreApplication.translate("MainWindow", u"Override Results", None))
     # retranslateUi
 
 
     def simulatePV(self):
         P_nom = []
-        for i in range(24):
-            P_nom.append(self.p_charge_max.value() * max(0, math.sin(math.pi * (i-6) / 12)) * (random.randrange(70, 100) / 100))
+        if self.seasonType.currentText() == "Summer":
+            for i in range(24):
+              P_nom.append((self.p_charge_max.value() * max(0, math.sin(math.pi * (i-6) / 12)) * (random.randrange(70, 100) / 100)))
+        else:
+            for i in range(24):
+              P_nom.append((max(0, self.p_charge_max.value() * math.sin(math.pi * (i-8) / 8) - 2.5) * (random.randrange(70, 100) / 100)))
         f2 = plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
                  P_nom)
         plt.xlabel("Час доби", fontsize=16)
         plt.ylabel("Генерація, кВт", fontsize=16)
-        plt.legend(['P_pv'])
         plt.title('Генерація', fontsize=20)
         plt.show()
+
+    def simulateLoad(self):
+        P_nom = []
+        cold_season = 0
+        if self.seasonType.currentText() == "Winter":
+            cold_season = 1.5
+        if self.loadType.currentText() == "Enterprise Typical":
+            if self.dayOfWeekType.currentText() == "Weekend":
+                for i in range(24):
+                    loadValue = 0
+                    if i <= 7:
+                        loadValue = 2.0 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(1.8, loadValue))
+                    if i >= 8 and i < 13:
+                        loadValue = cold_season + 2.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(2.1, loadValue))
+                    if i >= 13 and i < 21:
+                        loadValue = cold_season + 2.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(2.1, loadValue))
+                    if i >= 21 and i < 24:
+                        loadValue = cold_season + 2.0 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(1.8, loadValue))
+                    print(loadValue)
+            else:
+                for i in range(24):
+                    loadValue = 0
+                    if i <= 7:
+                        loadValue = 2.0 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(1.8, loadValue))
+                    if i >= 8 and i < 13:
+                        loadValue = cold_season + 4.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(3.9, loadValue))
+                    if i >= 13 and i < 14:
+                        loadValue = cold_season + 3.0 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(2.4, loadValue))
+                    if i >= 14 and i < 17:
+                        loadValue = cold_season + 4.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(3.9, loadValue))
+                    if i >= 17 and i <= 24:
+                        loadValue = 2.0 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(1.8, loadValue))
+                    print(loadValue)
+        elif self.loadType.currentText() == "Enterprise 24/7":
+            for i in range(24):
+                loadValue = 0
+                if i <= 8:
+                    loadValue = cold_season + 4.5 * (random.randrange(70, 100) / 100)
+                    P_nom.append(max(4.2, loadValue))
+                if i > 8 and i < 16:
+                    loadValue = cold_season + 2.5 * (random.randrange(70, 100) / 100)
+                    P_nom.append(max(2.1, loadValue))
+                if i >= 16 and i <= 24:
+                    loadValue = cold_season + 4.5 * (random.randrange(70, 100) / 100)
+                    P_nom.append(max(4.2, loadValue))
+                print(loadValue)
+        elif self.loadType.currentText() == "Private house":
+            if self.dayOfWeekType.currentText() == "Weekend":
+                for i in range(24):
+                    loadValue = 0
+                    if i <= 5:
+                        loadValue = cold_season + 0.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(0.2, loadValue))
+                    if i >= 6 and i < 9:
+                        loadValue = cold_season + 2.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(1.5, loadValue))
+                    if i >= 9 and i <= 21:
+                        loadValue = cold_season + 2.0 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(1.7, loadValue))
+                    if i > 21 and i <= 24:
+                        loadValue = cold_season + 0.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(0.2, loadValue))
+                    print(loadValue)
+            else:
+                for i in range(24):
+                    loadValue = 0
+                    if i <= 5:
+                        loadValue = cold_season + 0.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(0.2, loadValue))
+                    if i >= 6 and i < 9:
+                        loadValue = cold_season + 2.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(1.5, loadValue))
+                    if i >= 9 and i <= 17:
+                        loadValue = cold_season + 0.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(0.5, loadValue))
+                    if i > 17 and i < 21:
+                        loadValue = cold_season + 3.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(2.5, loadValue))
+                    if i >= 21 and i <= 24:
+                        loadValue = cold_season + 1.5 * (random.randrange(70, 100) / 100)
+                        P_nom.append(max(1.2, loadValue))
+                    print(loadValue)
+        if not self.fLoad:
+            self.fLoad = plt.figure()
+        if not self.checkOverride.isChecked():
+            self.fLoad.clear()
+        plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+                 P_nom)
+        plt.xlabel("Час доби", fontsize=16)
+        plt.ylabel("Споживання, кВт", fontsize=16)
+        plt.title('Споживання', fontsize=20)
+        self.fLoad.canvas.draw()
+        plt.show()
+
 
     def optimize(self):
         N = 24
@@ -381,7 +510,6 @@ class Ui_MainWindow(object):
 
         plt.xlabel("Час доби", fontsize=16)
         plt.ylabel("Рівень заряду", fontsize=16)
-        plt.legend(['N = ' + str(N)])
         plt.title('Рівень заряду батареї (SOC)', fontsize=20)
         plt.show()
 
@@ -390,6 +518,5 @@ class Ui_MainWindow(object):
                  P_load.value)
         plt.xlabel("Час доби", fontsize=16)
         plt.ylabel("Потужність, кВт", fontsize=16)
-        plt.legend(['P_pv', 'P_load'])
         plt.title('Генерація/споживання', fontsize=20)
         plt.show()
