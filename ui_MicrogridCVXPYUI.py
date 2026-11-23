@@ -412,6 +412,7 @@ class Ui_MainWindow(object):
         plt.title('Споживання', fontsize=20)
         self.fLoad.canvas.draw()
         plt.show()
+        return P_nom
 
 
     def optimize(self):
@@ -421,10 +422,10 @@ class Ui_MainWindow(object):
         SOC_max = self.SOC_max_value.value() / 100
         dt = 1
         E_bat = self.battery_capacity.value()
-        P_charge_max = 5
-        P_discharge_max = 5
-        P_grid_max = 5.0
-        c_buy = 50
+        P_charge_max = self.p_charge_max.value()
+        P_discharge_max = self.p_discharge_max.value()
+        P_grid_max = self.p_grid_max.value()
+        c_buy = self.p_grid_max.value()
 
         SOC = cp.Variable(N)
         P_bat = cp.Variable(N)
@@ -477,9 +478,35 @@ class Ui_MainWindow(object):
             P_pv[13] == 5
         ]
 
+        P_load.save_value(self.simulateLoad())
+
         # обмеження на попит (він завжди є впродовж доби)
         constraints += [
-            P_load >= 0
+            P_load >= 0,
+            P_load[0] == self.simulateLoad()[0],
+            P_load[1] == self.simulateLoad()[1],
+            P_load[2] == self.simulateLoad()[2],
+            P_load[3] == self.simulateLoad()[3],
+            P_load[4] == self.simulateLoad()[4],
+            P_load[5] == self.simulateLoad()[5],
+            P_load[6] == self.simulateLoad()[6],
+            P_load[7] == self.simulateLoad()[7],
+            P_load[8] == self.simulateLoad()[8],
+            P_load[9] == self.simulateLoad()[9],
+            P_load[10] == self.simulateLoad()[10],
+            P_load[11] == self.simulateLoad()[11],
+            P_load[12] == self.simulateLoad()[12],
+            P_load[13] == self.simulateLoad()[13],
+            P_load[14] == self.simulateLoad()[14],
+            P_load[15] == self.simulateLoad()[15],
+            P_load[16] == self.simulateLoad()[16],
+            P_load[17] == self.simulateLoad()[17],
+            P_load[18] == self.simulateLoad()[18],
+            P_load[19] == self.simulateLoad()[19],
+            P_load[20] == self.simulateLoad()[20],
+            P_load[21] == self.simulateLoad()[21],
+            P_load[22] == self.simulateLoad()[22],
+            P_load[23] == self.simulateLoad()[23]
         ]
 
         cost = cp.sum(
