@@ -2,6 +2,7 @@
 import math
 import random
 from asyncio.windows_events import NULL
+from email import message
 from pickletools import optimize
 
 ################################################################################
@@ -14,6 +15,7 @@ from pickletools import optimize
 
 import cvxpy as cp
 import matplotlib.pyplot as plt
+from PyQt6.QtGui import QValidator, QIntValidator
 
 from PySide6.QtCore import (QCoreApplication,
     QMetaObject, QRect,
@@ -21,18 +23,18 @@ from PySide6.QtCore import (QCoreApplication,
 from PySide6.QtWidgets import (QComboBox, QGridLayout, QLabel,
                                QMenuBar, QPushButton,
                                QSlider, QSpinBox, QStatusBar, QVBoxLayout,
-                               QWidget, QLCDNumber, QCheckBox)
+                               QWidget, QLCDNumber, QCheckBox, QMessageBox, QLineEdit)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(881, 623)
+        MainWindow.resize(881, 470)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayoutWidget = QWidget(self.centralwidget)
         self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
-        self.verticalLayoutWidget.setGeometry(QRect(0, 540, 881, 48))
+        self.verticalLayoutWidget.setGeometry(QRect(0, 400, 881, 48))
         self.verticalLayoutOptimize = QVBoxLayout(self.verticalLayoutWidget)
         self.verticalLayoutOptimize.setObjectName(u"verticalLayoutOptimize")
         self.verticalLayoutOptimize.setContentsMargins(0, 0, 0, 0)
@@ -40,10 +42,10 @@ class Ui_MainWindow(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.gridLayout_2 = QGridLayout()
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.optimizeButton = QPushButton(self.verticalLayoutWidget)
-        self.optimizeButton.setObjectName(u"optimizeButton")
+        self.optimizeButtonPVandPgrid = QPushButton(self.verticalLayoutWidget)
+        self.optimizeButtonPVandPgrid.setObjectName(u"optimizeButtonPVandPgrid")
 
-        self.gridLayout_2.addWidget(self.optimizeButton, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.optimizeButtonPVandPgrid, 0, 0, 1, 1)
 
         self.simulatePVButton = QPushButton(self.verticalLayoutWidget)
         self.simulatePVButton.setObjectName(u"simulatePVButton")
@@ -61,7 +63,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayoutWidget_2 = QWidget(self.centralwidget)
         self.verticalLayoutWidget_2.setObjectName(u"verticalLayoutWidget_2")
-        self.verticalLayoutWidget_2.setGeometry(QRect(0, 0, 881, 541))
+        self.verticalLayoutWidget_2.setGeometry(QRect(0, 0, 881, 400))
         self.verticalLayoutInputParams = QVBoxLayout(self.verticalLayoutWidget_2)
         self.verticalLayoutInputParams.setObjectName(u"verticalLayoutInputParams")
         self.verticalLayoutInputParams.setContentsMargins(0, 0, 0, 0)
@@ -71,6 +73,11 @@ class Ui_MainWindow(object):
         self.labelSOCMax.setObjectName(u"labelSOCMax")
 
         self.gridLayout.addWidget(self.labelSOCMax, 2, 0, 1, 1)
+
+        self.labelPgridUnavailable = QLabel(self.verticalLayoutWidget_2)
+        self.labelPgridUnavailable.setObjectName(u"labelPgridUnavailable")
+
+        self.gridLayout.addWidget(self.labelPgridUnavailable, 11, 0, 1, 1)
 
         self.SOC_min_value = QSlider(self.verticalLayoutWidget_2)
         self.SOC_min_value.setObjectName(u"SOC_min_value")
@@ -94,6 +101,8 @@ class Ui_MainWindow(object):
         self.p_discharge_max.setMinimum(1)
         self.p_charge_max.setValue(5)
         self.p_discharge_max.setValue(5)
+
+        self.fLoad = None
 
         self.gridLayout.addWidget(self.p_charge_max, 4, 1, 1, 1)
 
@@ -169,6 +178,7 @@ class Ui_MainWindow(object):
         self.c_buy.setMinimum(0)
         self.c_buy.setMaximum(9999)
         self.c_buy.setValue(50)
+        self.c_buy.setEnabled(False)
 
         self.gridLayout.addWidget(self.c_buy, 7, 1, 1, 1)
 
@@ -204,6 +214,7 @@ class Ui_MainWindow(object):
         self.p_grid_max.setMinimum(0)
         self.p_grid_max.setMaximum(100)
         self.p_grid_max.setValue(0)
+        self.p_grid_max.setEnabled(False)
 
         self.gridLayout.addWidget(self.p_grid_max, 6, 1, 1, 1)
 
@@ -231,7 +242,17 @@ class Ui_MainWindow(object):
 
         self.checkOverride = QCheckBox(self.verticalLayoutWidget_2)
         self.checkOverride.setObjectName(u"checkOverride")
-        self.gridLayout.addWidget(self.checkOverride, 11, 1, 1, 1)
+        self.gridLayout.addWidget(self.checkOverride, 13, 1, 1, 1)
+
+        self.lineEdit = QLineEdit(self.verticalLayoutWidget_2)
+        self.lineEdit.setObjectName(u"lineEdit")
+        self.lineEdit.setEnabled(False)
+
+        self.gridLayout.addWidget(self.lineEdit, 11, 1, 1, 1)
+
+        self.checkPgridUsage = QCheckBox(self.verticalLayoutWidget_2)
+        self.checkPgridUsage.setObjectName(u"checkOverride")
+        self.gridLayout.addWidget(self.checkPgridUsage, 12, 1, 1, 1)
 
         self.verticalLayoutInputParams.addLayout(self.gridLayout)
 
@@ -248,19 +269,23 @@ class Ui_MainWindow(object):
         self.lcdSOCMin.display(str(0.1))
         self.lcdSOCMax.display(str(0.9))
 
-        self.fPV = NULL
-        self.fLoad = NULL
-
         self.retranslateUi(MainWindow)
         self.SOC_initial_value.valueChanged.connect(self.updateSOCInitialLCD)
         self.SOC_min_value.valueChanged.connect(self.updateSOCMinLCD)
         self.SOC_max_value.valueChanged.connect(self.updateSOCMaxLCD)
-        self.optimizeButton.clicked.connect(self.optimize)
+        self.optimizeButtonPVandPgrid.clicked.connect(self.optimizePVandPgrid)
         self.simulatePVButton.clicked.connect(self.simulatePV)
         self.simulateLoadButton.clicked.connect(self.simulateLoad)
+        self.checkPgridUsage.checkStateChanged.connect(self.stateChangePgrid)
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
+
+
+    def stateChangePgrid(self):
+        self.p_grid_max.setEnabled(not self.p_grid_max.isEnabled())
+        self.c_buy.setEnabled(not self.c_buy.isEnabled())
+        self.lineEdit.setEnabled(not self.lineEdit.isEnabled())
 
 
     def updateSOCInitialLCD(self, value):
@@ -277,7 +302,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.optimizeButton.setText(QCoreApplication.translate("MainWindow", u"Optimize", None))
+        self.optimizeButtonPVandPgrid.setText(QCoreApplication.translate("MainWindow", u"Optimize", None))
         self.simulatePVButton.setText(QCoreApplication.translate("MainWindow", u"Simulate PV", None))
         self.simulateLoadButton.setText(QCoreApplication.translate("MainWindow", u"Simulate Load", None))
         self.labelSOCMax.setText(QCoreApplication.translate("MainWindow", u"SOC Max", None))
@@ -291,7 +316,9 @@ class Ui_MainWindow(object):
         self.labelLoadType.setText(QCoreApplication.translate("MainWindow", u"Load type", None))
         self.labelDayOfWeek.setText(QCoreApplication.translate("MainWindow", u"Day of week", None))
         self.labelSOCMin.setText(QCoreApplication.translate("MainWindow", u"SOC Min", None))
+        self.labelPgridUnavailable.setText(QCoreApplication.translate("MainWindow", u"Pgrid Unavailable", None))
         self.checkOverride.setText(QCoreApplication.translate("MainWindow", u"Override Results", None))
+        self.checkPgridUsage.setText(QCoreApplication.translate("MainWindow", u"Use Pgrid", None))
     # retranslateUi
 
 
@@ -302,7 +329,7 @@ class Ui_MainWindow(object):
               P_nom.append((self.p_charge_max.value() * max(0, math.sin(math.pi * (i-6) / 12)) * (random.randrange(70, 100) / 100)))
         else:
             for i in range(24):
-              P_nom.append((max(0, self.p_charge_max.value() * math.sin(math.pi * (i-8) / 8) - 2.5) * (random.randrange(70, 100) / 100)))
+              P_nom.append((max(0, self.p_charge_max.value() * math.sin(math.pi * (i-8) / 8) - 2.5) * (random.randrange(40, 100) / 100)))
         f2 = plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
                  P_nom)
@@ -310,6 +337,7 @@ class Ui_MainWindow(object):
         plt.ylabel("Генерація, кВт", fontsize=16)
         plt.title('Генерація', fontsize=20)
         plt.show()
+
 
     def simulateLoad(self):
         P_nom = []
@@ -414,8 +442,7 @@ class Ui_MainWindow(object):
         plt.show()
         return P_nom
 
-
-    def optimize(self):
+    def optimizePloadandPgrid(self):
         N = 24
         SOC_initial = self.SOC_initial_value.value() / 100
         SOC_min = self.SOC_min_value.value() / 100
@@ -450,7 +477,7 @@ class Ui_MainWindow(object):
             SOC >= SOC_min,
             SOC <= SOC_max,
             P_bat >= -P_charge_max,
-            P_bat <= P_discharge_max,
+            P_bat <= P_discharge_max
         ]
 
         # рівняння балансу
@@ -478,35 +505,35 @@ class Ui_MainWindow(object):
             P_pv[13] == 5
         ]
 
-        P_load.save_value(self.simulateLoad())
+        P_load_arr = self.simulateLoad()
 
         # обмеження на попит (він завжди є впродовж доби)
         constraints += [
             P_load >= 0,
-            P_load[0] == self.simulateLoad()[0],
-            P_load[1] == self.simulateLoad()[1],
-            P_load[2] == self.simulateLoad()[2],
-            P_load[3] == self.simulateLoad()[3],
-            P_load[4] == self.simulateLoad()[4],
-            P_load[5] == self.simulateLoad()[5],
-            P_load[6] == self.simulateLoad()[6],
-            P_load[7] == self.simulateLoad()[7],
-            P_load[8] == self.simulateLoad()[8],
-            P_load[9] == self.simulateLoad()[9],
-            P_load[10] == self.simulateLoad()[10],
-            P_load[11] == self.simulateLoad()[11],
-            P_load[12] == self.simulateLoad()[12],
-            P_load[13] == self.simulateLoad()[13],
-            P_load[14] == self.simulateLoad()[14],
-            P_load[15] == self.simulateLoad()[15],
-            P_load[16] == self.simulateLoad()[16],
-            P_load[17] == self.simulateLoad()[17],
-            P_load[18] == self.simulateLoad()[18],
-            P_load[19] == self.simulateLoad()[19],
-            P_load[20] == self.simulateLoad()[20],
-            P_load[21] == self.simulateLoad()[21],
-            P_load[22] == self.simulateLoad()[22],
-            P_load[23] == self.simulateLoad()[23]
+            P_load[0] == P_load_arr[0],
+            P_load[1] == P_load_arr[1],
+            P_load[2] == P_load_arr[2],
+            P_load[3] == P_load_arr[3],
+            P_load[4] == P_load_arr[4],
+            P_load[5] == P_load_arr[5],
+            P_load[6] == P_load_arr[6],
+            P_load[7] == P_load_arr[7],
+            P_load[8] == P_load_arr[8],
+            P_load[9] == P_load_arr[9],
+            P_load[10] == P_load_arr[10],
+            P_load[11] == P_load_arr[11],
+            P_load[12] == P_load_arr[12],
+            P_load[13] == P_load_arr[13],
+            P_load[14] == P_load_arr[14],
+            P_load[15] == P_load_arr[15],
+            P_load[16] == P_load_arr[16],
+            P_load[17] == P_load_arr[17],
+            P_load[18] == P_load_arr[18],
+            P_load[19] == P_load_arr[19],
+            P_load[20] == P_load_arr[20],
+            P_load[21] == P_load_arr[21],
+            P_load[22] == P_load_arr[22],
+            P_load[23] == P_load_arr[23]
         ]
 
         cost = cp.sum(
@@ -528,13 +555,19 @@ class Ui_MainWindow(object):
         print("P_grid:")
         print(P_grid.value)
 
+        if problem.status != cp.OPTIMAL:
+            message = QMessageBox()
+            message.setWindowTitle("Warning")
+            message.setText(
+                "Cannot calculate the optimal load. Try to increase Pgrid value or adjust SOC initial")
+            message.exec()
+            return
+
         print("cost" + str(cost.value))
         plt.style.use('tableau-colorblind10')
 
         f1 = plt.figure()
-
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], SOC.value)
-
         plt.xlabel("Час доби", fontsize=16)
         plt.ylabel("Рівень заряду", fontsize=16)
         plt.title('Рівень заряду батареї (SOC)', fontsize=20)
@@ -545,5 +578,158 @@ class Ui_MainWindow(object):
                  P_load.value)
         plt.xlabel("Час доби", fontsize=16)
         plt.ylabel("Потужність, кВт", fontsize=16)
-        plt.title('Генерація/споживання', fontsize=20)
+        plt.title('Генерація (Ppv) і споживання (Pload)', fontsize=20)
+        plt.show()
+
+        f3 = plt.figure()
+        plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], P_grid.value)
+        plt.xlabel("Час доби", fontsize=16)
+        plt.ylabel("Імпорт електроенергії, кВт", fontsize=16)
+        plt.title('Імпорт (Pgrid)', fontsize=20)
+        plt.show()
+
+
+    def optimizePVandPgrid(self):
+        N = 24
+        SOC_initial = self.SOC_initial_value.value() / 100
+        SOC_min = self.SOC_min_value.value() / 100
+        SOC_max = self.SOC_max_value.value() / 100
+        dt = 1
+        E_bat = self.battery_capacity.value()
+        P_charge_max = self.p_charge_max.value()
+        P_discharge_max = self.p_discharge_max.value()
+        P_grid_max = self.p_grid_max.value()
+        c_buy = self.p_grid_max.value()
+
+        SOC = cp.Variable(N)
+        P_bat = cp.Variable(N)
+        P_grid = cp.Variable(N)
+        P_load = cp.Variable(N)
+        P_pv = cp.Variable(N)
+
+        # початкове значення заряду
+        constraints = [
+            SOC[0] == SOC_initial
+        ]
+
+        for t in range(N - 1):
+            # реалізація заряду батареї
+            constraints += [
+                SOC[t + 1] ==
+                SOC[t] - P_bat[t] * dt / E_bat
+            ]
+
+        # обмеження на рівень заряду батареї
+        constraints += [
+            SOC >= SOC_min,
+            SOC <= SOC_max,
+            P_bat >= -P_charge_max,
+            P_bat <= P_discharge_max
+        ]
+
+        # рівняння балансу
+        P_grid = P_load - P_pv - P_bat
+
+        # обмеження на імпорт електроенергії з централізованого джерела
+        constraints += [
+            P_grid <= P_grid_max,
+            P_grid >= 0
+        ]
+
+        # обмеження на PV-генерацію
+        constraints += [
+            P_pv >= 0,
+            P_pv[0] == 0,
+            P_pv[1] == 0,
+            P_pv[2] == 0,
+            P_pv[3] == 0,
+            P_pv[4] == 0,
+            P_pv[5] == 0,
+            P_pv[21] == 0,
+            P_pv[22] == 0,
+            P_pv[23] == 0,
+            P_pv[12] == 5,
+            P_pv[13] == 5
+        ]
+
+        P_load_arr = self.simulateLoad()
+
+        # обмеження на попит (він завжди є впродовж доби)
+        constraints += [
+            P_load >= 0,
+            P_load[0] == P_load_arr[0],
+            P_load[1] == P_load_arr[1],
+            P_load[2] == P_load_arr[2],
+            P_load[3] == P_load_arr[3],
+            P_load[4] == P_load_arr[4],
+            P_load[5] == P_load_arr[5],
+            P_load[6] == P_load_arr[6],
+            P_load[7] == P_load_arr[7],
+            P_load[8] == P_load_arr[8],
+            P_load[9] == P_load_arr[9],
+            P_load[10] == P_load_arr[10],
+            P_load[11] == P_load_arr[11],
+            P_load[12] == P_load_arr[12],
+            P_load[13] == P_load_arr[13],
+            P_load[14] == P_load_arr[14],
+            P_load[15] == P_load_arr[15],
+            P_load[16] == P_load_arr[16],
+            P_load[17] == P_load_arr[17],
+            P_load[18] == P_load_arr[18],
+            P_load[19] == P_load_arr[19],
+            P_load[20] == P_load_arr[20],
+            P_load[21] == P_load_arr[21],
+            P_load[22] == P_load_arr[22],
+            P_load[23] == P_load_arr[23]
+        ]
+
+        cost = cp.sum(
+            cp.multiply(c_buy, P_grid)
+        ) * dt
+
+        problem = cp.Problem(cp.Minimize(cost), constraints)
+
+        problem.solve()
+        print(problem.status)
+        print("SOC:")
+        print(SOC.value)
+        print("P_bat:")
+        print(P_bat.value)
+        print("P_pv:")
+        print(P_pv.value)
+        print("P_load:")
+        print(P_load.value)
+        print("P_grid:")
+        print(P_grid.value)
+
+        if problem.status != cp.OPTIMAL:
+            message = QMessageBox()
+            message.setWindowTitle("Warning")
+            message.setText("Cannot calculate the optimal generation. Try to increase Pgrid value or adjust SOC initial")
+            message.exec()
+            return
+
+        print("cost" + str(cost.value))
+        plt.style.use('tableau-colorblind10')
+
+        f1 = plt.figure()
+        plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], SOC.value)
+        plt.xlabel("Час доби", fontsize=16)
+        plt.ylabel("Рівень заряду", fontsize=16)
+        plt.title('Рівень заряду батареї (SOC)', fontsize=20)
+        plt.show()
+
+        f2 = plt.figure()
+        plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], P_pv.value,
+                 P_load.value)
+        plt.xlabel("Час доби", fontsize=16)
+        plt.ylabel("Потужність, кВт", fontsize=16)
+        plt.title('Генерація (Ppv) і споживання (Pload)', fontsize=20)
+        plt.show()
+
+        f3 = plt.figure()
+        plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], P_grid.value)
+        plt.xlabel("Час доби", fontsize=16)
+        plt.ylabel("Імпорт електроенергії, кВт", fontsize=16)
+        plt.title('Імпорт (Pgrid)', fontsize=20)
         plt.show()
