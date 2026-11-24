@@ -301,22 +301,22 @@ class Ui_MainWindow(object):
 
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.optimizeButtonPVandPgrid.setText(QCoreApplication.translate("MainWindow", u"Optimize", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Microgrid Optimizer", None))
+        self.optimizeButtonPVandPgrid.setText(QCoreApplication.translate("MainWindow", u"Optimize Ppv and Pgrid", None))
         self.simulatePVButton.setText(QCoreApplication.translate("MainWindow", u"Simulate PV", None))
         self.simulateLoadButton.setText(QCoreApplication.translate("MainWindow", u"Simulate Load", None))
         self.labelSOCMax.setText(QCoreApplication.translate("MainWindow", u"SOC Max", None))
         self.labelSOCInitial.setText(QCoreApplication.translate("MainWindow", u"SOC Initial", None))
-        self.labelPGridMax.setText(QCoreApplication.translate("MainWindow", u"P grid max", None))
-        self.labelEBat.setText(QCoreApplication.translate("MainWindow", u"E bat", None))
-        self.labelPChargeMax.setText(QCoreApplication.translate("MainWindow", u"P charge max", None))
-        self.labelPDischargeMax.setText(QCoreApplication.translate("MainWindow", u"P discharge max", None))
+        self.labelPGridMax.setText(QCoreApplication.translate("MainWindow", u"P grid max, W", None))
+        self.labelEBat.setText(QCoreApplication.translate("MainWindow", u"E bat, W", None))
+        self.labelPChargeMax.setText(QCoreApplication.translate("MainWindow", u"P charge max, W", None))
+        self.labelPDischargeMax.setText(QCoreApplication.translate("MainWindow", u"P discharge max, W", None))
         self.labelCBuy.setText(QCoreApplication.translate("MainWindow", u"C buy", None))
         self.labelSeason.setText(QCoreApplication.translate("MainWindow", u"Season", None))
         self.labelLoadType.setText(QCoreApplication.translate("MainWindow", u"Load type", None))
         self.labelDayOfWeek.setText(QCoreApplication.translate("MainWindow", u"Day of week", None))
         self.labelSOCMin.setText(QCoreApplication.translate("MainWindow", u"SOC Min", None))
-        self.labelPgridUnavailable.setText(QCoreApplication.translate("MainWindow", u"Pgrid Unavailable", None))
+        self.labelPgridUnavailable.setText(QCoreApplication.translate("MainWindow", u"Pgrid Unavailable, hours", None))
         self.checkOverride.setText(QCoreApplication.translate("MainWindow", u"Override Results", None))
         self.checkPgridUsage.setText(QCoreApplication.translate("MainWindow", u"Use Pgrid", None))
     # retranslateUi
@@ -562,7 +562,7 @@ class Ui_MainWindow(object):
                 "Cannot calculate the optimal load. Try to increase Pgrid value or adjust SOC initial")
             message.exec()
             return
-
+        print("gg" + self.lineEdit.text())
         print("cost" + str(cost.value))
         plt.style.use('tableau-colorblind10')
 
@@ -682,6 +682,21 @@ class Ui_MainWindow(object):
             P_load[22] == P_load_arr[22],
             P_load[23] == P_load_arr[23]
         ]
+
+        P_grid_limits = []
+        if self.lineEdit.text() and not self.lineEdit.isEnabled():
+            print("Empty Pgrid!")
+        else:
+            P_grid_limits = self.lineEdit.text().split(" ")
+            for i in range(len(P_grid_limits)):
+                if not P_grid_limits[i].isdecimal():
+                    continue
+                index = int(P_grid_limits[i])
+
+                # обмеження на імпорт електроенергії (у т.ч і графіки відключень)
+                constraints += [
+                    P_grid[index] == 0
+                ]
 
         cost = cp.sum(
             cp.multiply(c_buy, P_grid)

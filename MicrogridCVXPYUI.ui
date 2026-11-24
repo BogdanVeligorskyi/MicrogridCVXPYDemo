@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>881</width>
+    <width>623</width>
     <height>623</height>
    </rect>
   </property>
@@ -20,7 +20,7 @@
       <x>0</x>
       <y>540</y>
       <width>881</width>
-      <height>52</height>
+      <height>53</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayoutOptimize">
@@ -48,29 +48,10 @@
     <layout class="QVBoxLayout" name="verticalLayoutInputParams">
      <item>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="2">
-        <widget class="QLCDNumber" name="lcdSOCInitial"/>
-       </item>
-       <item row="7" column="1">
-        <widget class="QSpinBox" name="c_buy"/>
-       </item>
-       <item row="1" column="2">
-        <widget class="QLCDNumber" name="lcdSOCMin"/>
-       </item>
-       <item row="7" column="0">
-        <widget class="QLabel" name="labelCBuy">
-         <property name="text">
-          <string>C buy</string>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="1">
-        <widget class="QComboBox" name="loadType">
-         <property name="iconSize">
-          <size>
-           <width>16</width>
-           <height>16</height>
-          </size>
+       <item row="1" column="1">
+        <widget class="QSlider" name="SOC_min_value">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
@@ -81,6 +62,20 @@
          </property>
         </widget>
        </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="labelSOCMax">
+         <property name="text">
+          <string>SOC Max</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="labelEBat">
+         <property name="text">
+          <string>E bat</string>
+         </property>
+        </widget>
+       </item>
        <item row="6" column="0">
         <widget class="QLabel" name="labelPGridMax">
          <property name="text">
@@ -88,8 +83,35 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
-        <widget class="QSpinBox" name="p_charge_max"/>
+       <item row="5" column="1">
+        <widget class="QSpinBox" name="p_discharge_max"/>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSlider" name="SOC_max_value">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="labelPDischargeMax">
+         <property name="text">
+          <string>P discharge max</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="1">
+        <widget class="QCheckBox" name="checkBox">
+         <property name="text">
+          <string>CheckBox</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLCDNumber" name="lcdSOCInitial"/>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLCDNumber" name="lcdSOCMax"/>
        </item>
        <item row="0" column="1">
         <widget class="QSlider" name="SOC_initial_value">
@@ -107,61 +129,6 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="labelSOCMin">
-         <property name="text">
-          <string>SOC Min</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="labelEBat">
-         <property name="text">
-          <string>E bat</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QSpinBox" name="battery_capacity">
-         <property name="minimum">
-          <number>10</number>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="2">
-        <widget class="QLCDNumber" name="lcdSOCMax"/>
-       </item>
-       <item row="2" column="1">
-        <widget class="QSlider" name="SOC_max_value">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QSpinBox" name="p_discharge_max"/>
-       </item>
-       <item row="9" column="0">
-        <widget class="QLabel" name="labelLoadType">
-         <property name="text">
-          <string>Load type</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="labelSOCInitial">
-         <property name="text">
-          <string>SOC Initial</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QSlider" name="SOC_min_value">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
        <item row="8" column="1">
         <widget class="QComboBox" name="seasonType">
          <property name="editable">
@@ -172,10 +139,27 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="labelPDischargeMax">
+       <item row="10" column="1">
+        <widget class="QCheckBox" name="checkBox_2">
          <property name="text">
-          <string>P discharge max</string>
+          <string>CheckBox</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QSpinBox" name="p_charge_max"/>
+       </item>
+       <item row="3" column="1">
+        <widget class="QSpinBox" name="battery_capacity">
+         <property name="minimum">
+          <number>10</number>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="labelSOCInitial">
+         <property name="text">
+          <string>SOC Initial</string>
          </property>
         </widget>
        </item>
@@ -186,20 +170,50 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
-        <widget class="QSpinBox" name="p_grid_max"/>
+       <item row="7" column="1">
+        <widget class="QSpinBox" name="c_buy"/>
        </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="labelSOCMax">
-         <property name="text">
-          <string>SOC Max</string>
+       <item row="9" column="1">
+        <widget class="QComboBox" name="loadType">
+         <property name="iconSize">
+          <size>
+           <width>16</width>
+           <height>16</height>
+          </size>
          </property>
         </widget>
        </item>
-       <item row="10" column="1">
-        <widget class="QCheckBox" name="checkBox">
+       <item row="1" column="2">
+        <widget class="QLCDNumber" name="lcdSOCMin"/>
+       </item>
+       <item row="6" column="1">
+        <widget class="QSpinBox" name="p_grid_max"/>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="labelCBuy">
          <property name="text">
-          <string>CheckBox</string>
+          <string>C buy</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="labelSOCMin">
+         <property name="text">
+          <string>SOC Min</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="labelLoadType">
+         <property name="text">
+          <string>Load type</string>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="1">
+        <widget class="QLineEdit" name="lineEdit">
+         <property name="text">
+          <string/>
          </property>
         </widget>
        </item>
@@ -213,7 +227,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>881</width>
+     <width>623</width>
      <height>22</height>
     </rect>
    </property>
