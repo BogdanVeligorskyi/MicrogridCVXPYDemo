@@ -15,13 +15,8 @@ from pickletools import optimize
 
 import cvxpy as cp
 import matplotlib.pyplot as plt
-from PyQt6.QtGui import QValidator, QIntValidator
-
-from PySide6.QtCore import (QCoreApplication,
-    QMetaObject, QRect,
-    QSize, Qt)
-from PySide6.QtWidgets import (QComboBox, QGridLayout, QLabel,
-                               QMenuBar, QPushButton,
+from PySide6.QtCore import (QCoreApplication, QMetaObject, QRect, QSize, Qt)
+from PySide6.QtWidgets import (QComboBox, QGridLayout, QLabel, QMenuBar, QPushButton,
                                QSlider, QSpinBox, QStatusBar, QVBoxLayout,
                                QWidget, QLCDNumber, QCheckBox, QMessageBox, QLineEdit)
 
@@ -47,15 +42,20 @@ class Ui_MainWindow(object):
 
         self.gridLayout_2.addWidget(self.optimizeButtonPVandPgrid, 0, 0, 1, 1)
 
+        self.optimizeButtonPloadandPgrid = QPushButton(self.verticalLayoutWidget)
+        self.optimizeButtonPloadandPgrid.setObjectName(u"optimizeButtonPloadandPgrid")
+
+        self.gridLayout_2.addWidget(self.optimizeButtonPloadandPgrid, 0, 1, 1, 1)
+
         self.simulatePVButton = QPushButton(self.verticalLayoutWidget)
         self.simulatePVButton.setObjectName(u"simulatePVButton")
 
-        self.gridLayout_2.addWidget(self.simulatePVButton, 0, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.simulatePVButton, 0, 2, 1, 1)
 
         self.simulateLoadButton = QPushButton(self.verticalLayoutWidget)
         self.simulateLoadButton.setObjectName(u"simulateLoadButton")
 
-        self.gridLayout_2.addWidget(self.simulateLoadButton, 0, 2, 1, 1)
+        self.gridLayout_2.addWidget(self.simulateLoadButton, 0, 3, 1, 1)
 
         self.verticalLayout.addLayout(self.gridLayout_2)
 
@@ -251,7 +251,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.lineEdit, 11, 1, 1, 1)
 
         self.checkPgridUsage = QCheckBox(self.verticalLayoutWidget_2)
-        self.checkPgridUsage.setObjectName(u"checkOverride")
+        self.checkPgridUsage.setObjectName(u"checkPgridUsage")
         self.gridLayout.addWidget(self.checkPgridUsage, 12, 1, 1, 1)
 
         self.verticalLayoutInputParams.addLayout(self.gridLayout)
@@ -274,6 +274,7 @@ class Ui_MainWindow(object):
         self.SOC_min_value.valueChanged.connect(self.updateSOCMinLCD)
         self.SOC_max_value.valueChanged.connect(self.updateSOCMaxLCD)
         self.optimizeButtonPVandPgrid.clicked.connect(self.optimizePVandPgrid)
+        self.optimizeButtonPloadandPgrid.clicked.connect(self.optimizePloadandPgrid)
         self.simulatePVButton.clicked.connect(self.simulatePV)
         self.simulateLoadButton.clicked.connect(self.simulateLoad)
         self.checkPgridUsage.checkStateChanged.connect(self.stateChangePgrid)
@@ -303,22 +304,23 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Microgrid Optimizer", None))
         self.optimizeButtonPVandPgrid.setText(QCoreApplication.translate("MainWindow", u"Optimize Ppv and Pgrid", None))
+        self.optimizeButtonPloadandPgrid.setText(QCoreApplication.translate("MainWindow", u"Optimize Pload and Pgrid", None))
         self.simulatePVButton.setText(QCoreApplication.translate("MainWindow", u"Simulate PV", None))
         self.simulateLoadButton.setText(QCoreApplication.translate("MainWindow", u"Simulate Load", None))
         self.labelSOCMax.setText(QCoreApplication.translate("MainWindow", u"SOC Max", None))
         self.labelSOCInitial.setText(QCoreApplication.translate("MainWindow", u"SOC Initial", None))
         self.labelPGridMax.setText(QCoreApplication.translate("MainWindow", u"P grid max, W", None))
-        self.labelEBat.setText(QCoreApplication.translate("MainWindow", u"E bat, W", None))
+        self.labelEBat.setText(QCoreApplication.translate("MainWindow", u"E bat, kW", None))
         self.labelPChargeMax.setText(QCoreApplication.translate("MainWindow", u"P charge max, W", None))
         self.labelPDischargeMax.setText(QCoreApplication.translate("MainWindow", u"P discharge max, W", None))
-        self.labelCBuy.setText(QCoreApplication.translate("MainWindow", u"C buy", None))
+        self.labelCBuy.setText(QCoreApplication.translate("MainWindow", u"C buy, c.u.", None))
         self.labelSeason.setText(QCoreApplication.translate("MainWindow", u"Season", None))
         self.labelLoadType.setText(QCoreApplication.translate("MainWindow", u"Load type", None))
         self.labelDayOfWeek.setText(QCoreApplication.translate("MainWindow", u"Day of week", None))
         self.labelSOCMin.setText(QCoreApplication.translate("MainWindow", u"SOC Min", None))
         self.labelPgridUnavailable.setText(QCoreApplication.translate("MainWindow", u"Pgrid Unavailable, hours", None))
-        self.checkOverride.setText(QCoreApplication.translate("MainWindow", u"Override Results", None))
-        self.checkPgridUsage.setText(QCoreApplication.translate("MainWindow", u"Use Pgrid", None))
+        self.checkOverride.setText(QCoreApplication.translate("MainWindow", u"Override results in table (for simulation modes)", None))
+        self.checkPgridUsage.setText(QCoreApplication.translate("MainWindow", u"Import Pgrid if available", None))
     # retranslateUi
 
 
@@ -333,10 +335,11 @@ class Ui_MainWindow(object):
         f2 = plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
                  P_nom)
-        plt.xlabel("Час доби", fontsize=16)
-        plt.ylabel("Генерація, кВт", fontsize=16)
-        plt.title('Генерація', fontsize=20)
+        plt.xlabel("Time of the day, hour", fontsize=16)
+        plt.ylabel("Generation, kW", fontsize=16)
+        plt.title('Generation', fontsize=20)
         plt.show()
+        return P_nom
 
 
     def simulateLoad(self):
@@ -435,9 +438,9 @@ class Ui_MainWindow(object):
             self.fLoad.clear()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
                  P_nom)
-        plt.xlabel("Час доби", fontsize=16)
-        plt.ylabel("Споживання, кВт", fontsize=16)
-        plt.title('Споживання', fontsize=20)
+        plt.xlabel("Time of the day, hour", fontsize=16)
+        plt.ylabel("Power consumption, kW", fontsize=16)
+        plt.title('Power consumption (Pload)', fontsize=20)
         self.fLoad.canvas.draw()
         plt.show()
         return P_nom
@@ -489,51 +492,38 @@ class Ui_MainWindow(object):
             P_grid >= 0
         ]
 
-        # обмеження на PV-генерацію
-        constraints += [
-            P_pv >= 0,
-            P_pv[0] == 0,
-            P_pv[1] == 0,
-            P_pv[2] == 0,
-            P_pv[3] == 0,
-            P_pv[4] == 0,
-            P_pv[5] == 0,
-            P_pv[21] == 0,
-            P_pv[22] == 0,
-            P_pv[23] == 0,
-            P_pv[12] == 5,
-            P_pv[13] == 5
-        ]
+        P_pv_arr = self.simulatePV()
 
-        P_load_arr = self.simulateLoad()
+        constraints += [
+            P_pv[0] == P_pv_arr[0],
+            P_pv[1] == P_pv_arr[1],
+            P_pv[2] == P_pv_arr[2],
+            P_pv[3] == P_pv_arr[3],
+            P_pv[4] == P_pv_arr[4],
+            P_pv[5] == P_pv_arr[5],
+            P_pv[6] == P_pv_arr[6],
+            P_pv[7] == P_pv_arr[7],
+            P_pv[8] == P_pv_arr[8],
+            P_pv[9] == P_pv_arr[9],
+            P_pv[10] == P_pv_arr[10],
+            P_pv[11] == P_pv_arr[11],
+            P_pv[12] == P_pv_arr[12],
+            P_pv[13] == P_pv_arr[13],
+            P_pv[14] == P_pv_arr[14],
+            P_pv[15] == P_pv_arr[15],
+            P_pv[16] == P_pv_arr[16],
+            P_pv[17] == P_pv_arr[17],
+            P_pv[18] == P_pv_arr[18],
+            P_pv[19] == P_pv_arr[19],
+            P_pv[20] == P_pv_arr[20],
+            P_pv[21] == P_pv_arr[21],
+            P_pv[22] == P_pv_arr[22],
+            P_pv[23] == P_pv_arr[23]
+        ]
 
         # обмеження на попит (він завжди є впродовж доби)
         constraints += [
-            P_load >= 0,
-            P_load[0] == P_load_arr[0],
-            P_load[1] == P_load_arr[1],
-            P_load[2] == P_load_arr[2],
-            P_load[3] == P_load_arr[3],
-            P_load[4] == P_load_arr[4],
-            P_load[5] == P_load_arr[5],
-            P_load[6] == P_load_arr[6],
-            P_load[7] == P_load_arr[7],
-            P_load[8] == P_load_arr[8],
-            P_load[9] == P_load_arr[9],
-            P_load[10] == P_load_arr[10],
-            P_load[11] == P_load_arr[11],
-            P_load[12] == P_load_arr[12],
-            P_load[13] == P_load_arr[13],
-            P_load[14] == P_load_arr[14],
-            P_load[15] == P_load_arr[15],
-            P_load[16] == P_load_arr[16],
-            P_load[17] == P_load_arr[17],
-            P_load[18] == P_load_arr[18],
-            P_load[19] == P_load_arr[19],
-            P_load[20] == P_load_arr[20],
-            P_load[21] == P_load_arr[21],
-            P_load[22] == P_load_arr[22],
-            P_load[23] == P_load_arr[23]
+            P_load >= 0
         ]
 
         cost = cp.sum(
@@ -559,33 +549,33 @@ class Ui_MainWindow(object):
             message = QMessageBox()
             message.setWindowTitle("Warning")
             message.setText(
-                "Cannot calculate the optimal load. Try to increase Pgrid value or adjust SOC initial")
+                "Cannot calculate the optimal load. Try to increase Pgrid value or adjust SOC initial or E bat")
             message.exec()
             return
-        print("gg" + self.lineEdit.text())
         print("cost" + str(cost.value))
         plt.style.use('tableau-colorblind10')
 
         f1 = plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], SOC.value)
-        plt.xlabel("Час доби", fontsize=16)
-        plt.ylabel("Рівень заряду", fontsize=16)
-        plt.title('Рівень заряду батареї (SOC)', fontsize=20)
+        plt.xlabel("Time of the day, hour", fontsize=16)
+        plt.ylabel("State of charge", fontsize=16)
+        plt.title('State of charge (SOC)', fontsize=20)
         plt.show()
 
         f2 = plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], P_pv.value,
                  P_load.value)
-        plt.xlabel("Час доби", fontsize=16)
-        plt.ylabel("Потужність, кВт", fontsize=16)
-        plt.title('Генерація (Ppv) і споживання (Pload)', fontsize=20)
+        plt.legend(['Ppv', 'Pload'])
+        plt.xlabel("Time of the day, hour", fontsize=16)
+        plt.ylabel("Generation, kW", fontsize=16)
+        plt.title('PV Generation (Ppv) and power consumption (Pload)', fontsize=20)
         plt.show()
 
         f3 = plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], P_grid.value)
-        plt.xlabel("Час доби", fontsize=16)
-        plt.ylabel("Імпорт електроенергії, кВт", fontsize=16)
-        plt.title('Імпорт (Pgrid)', fontsize=20)
+        plt.xlabel("Time of the day, hour", fontsize=16)
+        plt.ylabel("Electricity import, kW", fontsize=16)
+        plt.title('Import (Pgrid)', fontsize=20)
         plt.show()
 
 
@@ -727,24 +717,25 @@ class Ui_MainWindow(object):
         print("cost" + str(cost.value))
         plt.style.use('tableau-colorblind10')
 
-        f1 = plt.figure()
+        plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], SOC.value)
-        plt.xlabel("Час доби", fontsize=16)
-        plt.ylabel("Рівень заряду", fontsize=16)
-        plt.title('Рівень заряду батареї (SOC)', fontsize=20)
+        plt.xlabel("Time of the day, hour", fontsize=16)
+        plt.ylabel("State of charge", fontsize=16)
+        plt.title('State of charge (SOC)', fontsize=20)
         plt.show()
 
-        f2 = plt.figure()
+        plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], P_pv.value,
                  P_load.value)
-        plt.xlabel("Час доби", fontsize=16)
-        plt.ylabel("Потужність, кВт", fontsize=16)
-        plt.title('Генерація (Ppv) і споживання (Pload)', fontsize=20)
+        plt.legend(['Ppv', 'Pload'])
+        plt.xlabel("Time of the day, hour", fontsize=16)
+        plt.ylabel("Power consumption, kW", fontsize=16)
+        plt.title('Generation (Ppv) and consumption (Pload)', fontsize=20)
         plt.show()
 
-        f3 = plt.figure()
+        plt.figure()
         plt.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], P_grid.value)
-        plt.xlabel("Час доби", fontsize=16)
-        plt.ylabel("Імпорт електроенергії, кВт", fontsize=16)
-        plt.title('Імпорт (Pgrid)', fontsize=20)
+        plt.xlabel("Time of the day, hour", fontsize=16)
+        plt.ylabel("Electricity import, kW", fontsize=16)
+        plt.title('Import (Pgrid)', fontsize=20)
         plt.show()
